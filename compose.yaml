@@ -1,0 +1,12 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    volumes:
+      - ./runtime:/app/runtime
+    environment:
+      SESSION_DIR: /app/runtime/baileys
+      STATE_FILE: /app/runtime/state.json

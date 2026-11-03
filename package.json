@@ -1,0 +1,23 @@
+{
+  "name": "shopee-natal-bot",
+  "version": "0.1.0",
+  "description": "Garimpo e publicação de ofertas natalinas Shopee em grupo WhatsApp via Baileys",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "list-groups": "node src/index.js --list-groups",
+    "scan": "node src/index.js --scan-once",
+    "test": "node --test",
+    "check": "node --check src/config.js && node --check src/shopee.js && node --check src/offers.js && node --check src/state.js && node --check src/whatsapp.js && node --check src/index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "dotenv": "17.2.3",
+    "pino": "10.2.1",
+    "qrcode-terminal": "0.12.0"
+  }
+}
