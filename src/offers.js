@@ -20,6 +20,16 @@ function normalizeText(text) {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
+function matchesTerms(title, config) {
+  const normalized = normalizeText(title);
+  const excluded = config?.excludeTerms || [];
+  if (excluded.some(term => normalized.includes(normalizeText(term)))) return false;
+  if (Array.isArray(config?.matchTerms)) {
+    return config.matchTerms.some(term => normalized.includes(normalizeText(term)));
+  }
+  return NATAL.test(normalized);
+}
+
 function validAffiliateUrl(link) {
   try {
     const url = new URL(link);
@@ -32,10 +42,10 @@ function validAffiliateUrl(link) {
   }
 }
 
-export function normalizeOffer(raw) {
+export function normalizeOffer(raw, group = undefined) {
   if (!raw || typeof raw !== 'object') return null;
   const title = String(raw.productName || '').trim();
-  if (!NATAL.test(normalizeText(title))) return null;
+  if (!matchesTerms(title, group)) return null;
   if (!validAffiliateUrl(raw.offerLink)) return null;
   const price = numeric(raw.priceMin);
   const discount = percent(raw.priceDiscountRate);
@@ -59,18 +69,13 @@ export function normalizeOffer(raw) {
       imageUrl = image.href;
     }
   } catch {
-    // Imagem ausente ou fora de domínios conhecidos: enviar apenas texto.
+    // Imagem ausente ou fora de domínios conhecidos: texto.
   }
   return {
     key: shopId + ':' + itemId,
     title: title.slice(0, 200),
-    price,
-    discount,
-    rating,
-    sales,
-    commission,
-    link: raw.offerLink,
-    imageUrl
+    price, discount, rating, sales, commission,
+    link: raw.offerLink, imageUrl
   };
 }
 
@@ -85,17 +90,21 @@ export function rankingScore(offer) {
     offer.rating * 4 + Math.min(12, Math.log10(offer.sales + 1) * 4);
 }
 
-export function chooseOffer(rawOffers, state, config, now = Date.now()) {
+function sameGroup(entry, groupId) {
+  return groupId === undefined || (entry.groupId || 'natal') === groupId;
+}
+
+export function chooseOffer(rawOffers, state, config, now = Date.now(), groupId = undefined) {
   const cooldownMs = config.repostCooldownDays * 24 * 60 * 60 * 1000;
   const recent = new Set((state.sent || [])
-    .filter(entry => now - Date.parse(entry.at) < cooldownMs)
+    .filter(entry => sameGroup(entry, groupId) && now - Date.parse(entry.at) < cooldownMs)
     .map(entry => entry.key));
   const pending = new Set((state.pending || [])
-    .filter(entry => now - Date.parse(entry.at) < 24 * 60 * 60 * 1000)
+    .filter(entry => sameGroup(entry, groupId) && now - Date.parse(entry.at) < 24 * 60 * 60 * 1000)
     .map(entry => entry.key));
   const candidates = new Map();
   for (const raw of rawOffers) {
-    const offer = normalizeOffer(raw);
+    const offer = normalizeOffer(raw, config);
     if (!qualifies(offer, config) || recent.has(offer.key) || pending.has(offer.key)) continue;
     const previous = candidates.get(offer.key);
     if (!previous || rankingScore(offer) > rankingScore(previous)) candidates.set(offer.key, offer);
@@ -111,19 +120,20 @@ export function brasilDate(now, timeZone) {
   return { day: get('year') + '-' + get('month') + '-' + get('day'), hour: Number(get('hour')) };
 }
 
-export function canPost(state, config, now = Date.now()) {
+export function canPost(state, config, now = Date.now(), groupId = undefined) {
   const local = brasilDate(now, config.timeZone);
   if (local.hour < config.sendStartHour || local.hour >= config.sendEndHour) return false;
-  const attempts = [...(state.sent || []), ...(state.pending || [])];
+  const attempts = [...(state.sent || []), ...(state.pending || [])].filter(entry => sameGroup(entry, groupId));
   if (attempts.filter(entry => brasilDate(Date.parse(entry.at), config.timeZone).day === local.day).length >= config.maxDailySends) return false;
   const latest = attempts.reduce((max, entry) => Math.max(max, Date.parse(entry.at) || 0), 0);
   return !latest || now - latest >= config.minPostGapMinutes * 60000;
 }
 
-export function formatMessage(offer) {
+export function formatMessage(offer, groupName = 'Achadinhos de Natal') {
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  const headline = String(groupName).replace(/[\r\n*]/g, ' ').trim().slice(0, 90).toUpperCase();
   return [
-    '🎄 *ACHADINHO DE NATAL!* 🎁',
+    '✨ *' + headline + '* 🛍️',
     '',
     '*' + offer.title.replace(/[\r\n*]/g, ' ').trim() + '*',
     '',

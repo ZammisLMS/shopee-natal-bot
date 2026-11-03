@@ -1,0 +1,90 @@
+[
+  {
+    "id": "natal",
+    "name": "Achadinhos de Natal",
+    "jid": "",
+    "enabled": false,
+    "provider": "shopee",
+    "keywords": [
+      "arvore de natal",
+      "bola de natal kit",
+      "pisca pisca natal",
+      "luzes natal led",
+      "guirlanda natal",
+      "enfeites natalinos",
+      "papai noel decoracao",
+      "mesa posta natal",
+      "sousplat natal",
+      "capa almofada natal"
+    ],
+    "matchTerms": [
+      "natal",
+      "noel",
+      "guirlanda",
+      "pisca pisca",
+      "festao",
+      "rena"
+    ],
+    "excludeTerms": [
+      "natal rn",
+      "cidade natal",
+      "mapa natal"
+    ],
+    "filters": {
+      "maxPrice": 100,
+      "minDiscount": 30,
+      "minRating": 4.7,
+      "minSales": 50,
+      "minCommission": 5
+    },
+    "schedule": {
+      "intervalMinutes": 30,
+      "maxDailySends": 6,
+      "minPostGapMinutes": 120,
+      "repostCooldownDays": 7,
+      "startHour": 9,
+      "endHour": 21
+    }
+  },
+  {
+    "id": "suplementos",
+    "name": "Achadinhos Fitness",
+    "jid": "",
+    "enabled": false,
+    "provider": "shopee",
+    "keywords": [
+      "creatina monohidratada",
+      "whey protein",
+      "barra de proteina",
+      "multivitaminico",
+      "pre treino"
+    ],
+    "matchTerms": [
+      "creatina",
+      "whey",
+      "proteina",
+      "suplemento",
+      "pre treino",
+      "multivitaminico"
+    ],
+    "excludeTerms": [
+      "brinde",
+      "amostra gratis"
+    ],
+    "filters": {
+      "maxPrice": 250,
+      "minDiscount": 20,
+      "minRating": 4.8,
+      "minSales": 100,
+      "minCommission": 4
+    },
+    "schedule": {
+      "intervalMinutes": 60,
+      "maxDailySends": 4,
+      "minPostGapMinutes": 180,
+      "repostCooldownDays": 14,
+      "startHour": 9,
+      "endHour": 21
+    }
+  }
+]

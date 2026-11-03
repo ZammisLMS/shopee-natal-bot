@@ -5,8 +5,17 @@ services:
     init: true
     env_file:
       - .env
+    # Painel acessível SOMENTE na própria VPS; usar SSH túnel ou HTTPS proxy seguro.
+    ports:
+      - "127.0.0.1:8787:8787"
     volumes:
-      - ./runtime:/app/runtime
+      - bot_runtime:/app/runtime
     environment:
       SESSION_DIR: /app/runtime/baileys
       STATE_FILE: /app/runtime/state.json
+      GROUPS_FILE: /app/runtime/groups.json
+      PANEL_HOST: 0.0.0.0
+      CONTAINER_PANEL_BIND: "true"
+
+volumes:
+  bot_runtime:
