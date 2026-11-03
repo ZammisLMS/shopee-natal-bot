@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Garimpo • Painel de Achadinhos</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="ambient"></div>
+  <section id="login" class="login">
+    <div class="login-card">
+      <span class="brand-mark">✦</span>
+      <div class="eyebrow">SEU GARIMPO, ORGANIZADO</div>
+      <h1>Uma vitrine de boas oportunidades.</h1>
+      <p>Entre com o token definido em <code>PANEL_TOKEN</code> na VPS. O painel não armazena credenciais da Shopee.</p>
+      <form id="login-form">
+        <label for="token">Token de administração</label>
+        <input type="password" id="token" autocomplete="off" placeholder="Cole seu token de 32+ caracteres" required>
+        <button class="primary" type="submit">Entrar no painel <span>↗</span></button>
+      </form>
+      <div class="note" id="login-error"></div>
+    </div>
+  </section>
+
+  <div class="shell hidden" id="app">
+    <aside class="sidebar">
+      <div class="logo"><div class="symbol">✦</div><div><strong>garimpo<span>.</span></strong><small>ACHADINHOS AUTOMÁTICOS</small></div></div>
+      <div class="nav-section">WORKSPACE</div>
+      <nav>
+        <a href="#visao" class="nav-active"><span>◈</span> Visão geral</a>
+        <a href="#grupos"><span>▦</span> Meus grupos</a>
+        <a href="#fontes"><span>◎</span> Fontes de ofertas</a>
+        <a href="#atividade"><span>≡</span> Atividade</a>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-help">
+        <span class="help-icon">ⓘ</span>
+        <strong>Envios protegidos</strong>
+        <p>O envio real exige <code>SEND_ENABLED=true</code> na VPS, além de cada grupo ativado.</p>
+      </div>
+      <button id="logout" class="logout">↪ &nbsp; Sair da sessão</button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumb">PAINEL <span>/</span> <strong>Visão geral</strong></div>
+        <div class="top-actions">
+          <div class="live-dot" id="connection-dot"></div><span id="connection-label">Conectando…</span>
+          <button class="ghost small" id="refresh">↻ &nbsp; Atualizar</button>
+        </div>
+      </header>
+
+      <div class="content" id="visao">
+        <div class="hero">
+          <div>
+            <div class="eyebrow purple">INTELIGÊNCIA DE OFERTAS · 2026</div>
+            <h1>Seus achadinhos, <em>no piloto automático.</em></h1>
+            <p>Um mesmo bot. Grupos diferentes. Cada um com seu próprio jeito de encontrar ofertas.</p>
+            <button id="new-group" class="primary">＋ &nbsp; Novo grupo</button>
+          </div>
+          <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span>✦</span></div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="stat-label">GRUPOS CADASTRADOS <span>▦</span></div><strong id="stat-groups">—</strong><small>Nichos monitorados</small></div>
+          <div class="stat"><div class="stat-label">GRUPOS ATIVOS <span>◉</span></div><strong id="stat-active">—</strong><small>Com envio habilitado no grupo</small></div>
+          <div class="stat"><div class="stat-label">ENVIADOS HOJE <span>↗</span></div><strong id="stat-sent">—</strong><small>Todos os grupos</small></div>
+          <div class="stat"><div class="stat-label">FONTE DISPONÍVEL <span>⌁</span></div><strong id="stat-sources">1<span class="stat-suffix">/7</span></strong><small>Outras integrações planejadas</small></div>
+        </div>
+
+        <section class="section" id="grupos">
+          <div class="section-heading"><div><div class="eyebrow">SEUS CANAIS</div><h2>Grupos e parâmetros</h2><p>Controle a curadoria, as regras e a frequência de cada grupo.</p></div><button class="outline" id="new-group-alt">＋ Adicionar grupo</button></div>
+          <div id="groups-list" class="group-grid"><div class="empty">Buscando grupos…</div></div>
+        </section>
+
+        <section class="section" id="fontes">
+          <div class="section-heading"><div><div class="eyebrow">EXPANSÃO</div><h2>Fontes de ofertas</h2><p>Conectores disponíveis e próximos mercados para explorar.</p></div></div>
+          <div class="sources" id="sources-list"></div>
+          <p class="footnote">Integrações futuras exigem habilitação no programa de afiliados e validação das APIs; não estão conectadas ou publicando.</p>
+        </section>
+
+        <section class="section" id="atividade">
+          <div class="section-heading"><div><div class="eyebrow">MONITORAMENTO</div><h2>Atividade recente</h2><p>Simulações, ofertas encontradas e envios registrados.</p></div></div>
+          <div class="activity-table"><div class="activity-head"><span>GRUPO / PRODUTO</span><span>EVENTO</span><span>HORÁRIO</span></div><div id="events-list"><div class="empty">Ainda sem atividades.</div></div></div>
+        </section>
+
+        <footer>Feito para garimpar com critério. <span>Não afiliado oficialmente ao WhatsApp ou às lojas citadas.</span></footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="overlay hidden" id="drawer-overlay"></div>
+  <aside class="drawer hidden" id="drawer" aria-labelledby="drawer-title" aria-modal="true" role="dialog">
+    <div class="drawer-head"><div><div class="eyebrow">CONFIGURAÇÃO DO CANAL</div><h2 id="drawer-title">Novo grupo</h2></div><button id="drawer-close" class="close" aria-label="Fechar">×</button></div>
+    <form id="group-form" class="drawer-form">
+      <input type="hidden" name="groupId" id="group-id">
+      <div class="field-grid">
+        <label class="field full">Nome exato do grupo no WhatsApp <input name="name" required maxlength="90" placeholder="Achadinhos de Natal"></label>
+        <label class="field full">JID do grupo WhatsApp <input name="jid" placeholder="120363...@g.us"><small>Execute <code>npm run list-groups</code> para encontrar o JID. Obrigatório para ativar.</small></label>
+        <label class="field full">Fonte <select name="provider"><option value="shopee">Shopee · integrada</option></select></label>
+      </div>
+      <div class="form-divider">BUSCA E CLASSIFICAÇÃO</div>
+      <label class="field">Palavras-chave de pesquisa <textarea name="keywords" rows="4" required placeholder="arvore de natal&#10;guirlanda natal"></textarea><small>Uma palavra-chave por linha. O motor alterna as buscas.</small></label>
+      <label class="field">Termos que devem aparecer no produto <textarea name="matchTerms" rows="3" required placeholder="natal&#10;guirlanda"></textarea></label>
+      <label class="field">Termos excluídos <textarea name="excludeTerms" rows="2" placeholder="amostra gratis"></textarea></label>
+      <div class="form-divider">FILTROS DE QUALIDADE</div>
+      <div class="field-grid two">
+        <label class="field">Preço máximo (R$) <input name="maxPrice" type="number" min="1" max="100000" step=".01" required></label>
+        <label class="field">Desconto mínimo (%) <input name="minDiscount" type="number" min="0" max="100" step=".1" required></label>
+        <label class="field">Nota mínima <input name="minRating" type="number" min="0" max="5" step=".1" required></label>
+        <label class="field">Vendas mínimas <input name="minSales" type="number" min="0" step="1" required></label>
+        <label class="field full">Comissão mínima (%) <input name="minCommission" type="number" min="0" max="100" step=".1" required></label>
+      </div>
+      <div class="form-divider">FREQUÊNCIA E LIMITES</div>
+      <div class="field-grid two">
+        <label class="field">Buscar a cada (min) <input name="intervalMinutes" type="number" min="15" max="1440" required></label>
+        <label class="field">Posts por dia <input name="maxDailySends" type="number" min="1" max="24" required></label>
+        <label class="field">Minutos entre posts <input name="minPostGapMinutes" type="number" min="10" max="1440" required></label>
+        <label class="field">Repostar após (dias) <input name="repostCooldownDays" type="number" min="1" max="90" required></label>
+        <label class="field">Início (hora BRT) <input name="startHour" type="number" min="0" max="23" required></label>
+        <label class="field">Fim (hora BRT) <input name="endHour" type="number" min="1" max="24" required></label>
+      </div>
+      <label class="toggle-row"><span><strong>Ativar monitoramento do grupo</strong><small>Para enviar mensagens reais, também é necessário SEND_ENABLED=true na VPS.</small></span><input name="enabled" type="checkbox"><span class="switch"></span></label>
+      <div id="form-error" class="form-error"></div>
+      <div class="drawer-actions"><button type="button" id="group-delete" class="danger">Excluir</button><button class="primary" type="submit" id="save-group">Salvar grupo ↗</button></div>
+    </form>
+  </aside>
+  <div role="status" aria-live="polite" id="toast" class="toast hidden"></div>
+</body>
+</html>

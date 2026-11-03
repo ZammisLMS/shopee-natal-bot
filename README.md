@@ -1,105 +1,119 @@
-# Shopee Natal Bot 🎄
+# Garimpo — bot de achadinhos por grupo (Shopee + WhatsApp)
 
-Bot de garimpo de ofertas **exclusivamente natalinas** na API oficial de afiliados Shopee, com seleção automática e publicação em um grupo de WhatsApp via [Baileys](https://github.com/WhiskeySockets/Baileys).
+Bot Node.js com **Shopee Affiliate GraphQL**, **Baileys** e **painel web** para até 20 grupos WhatsApp, cada um com seu próprio nicho, filtros e limites. Padrão de segurança: `SEND_ENABLED=false` e grupos desativados. Não envia nada até ser habilitado conscientemente.
 
-> **Atenção:** Baileys é uma biblioteca não oficial baseada no WhatsApp Web. A automação pode contrariar políticas do WhatsApp e causar restrição ou banimento do número. Use apenas em grupo próprio, com membros que aceitaram receber promoções, e preferencialmente um número dedicado. O sistema não está afiliado à Shopee ou à Meta.
+## O que já funciona
 
-## Funcionalidades
-
-- Pesquisa alternada por palavras-chave de Natal (arquivo config/keywords.json).
-- Uso da API **de Afiliados** da Shopee (GraphQL assinada com App ID + Secret).
-- Filtros de preço até R$ 100, desconto mínimo 30%, avaliação 4,7, 50 vendas e comissão de 5%.
-- Relevância por desconto, comissão, avaliação e volume de vendas.
-- Limite de 6 ofertas/dia, pelo menos 120 min entre publicações e janela 9h–21h no horário de São Paulo.
-- Deduplicação por 7 dias e proteção de 24 horas para envios cujo resultado ficou incerto.
-- Mensagem com foto (quando a Shopee fornece imagem HTTPS), preço e link **de afiliado**.
-- Sessão do WhatsApp e estado persistentes, inclusive após reinício.
-- Modo seguro: SEND_ENABLED=false por padrão.
+- **Painel web** para cadastrar, configurar, testar, pausar e remover grupos.
+- **Nichos independentes** (exemplos: Achadinhos de Natal e Achadinhos Fitness/Suplementos). Cada grupo tem palavras-chave, termos obrigatórios e excluídos, preço máximo, desconto, nota, vendas e comissão mínimos.
+- **Agendamento por grupo:** intervalo de busca, limite de posts/dia, pausa entre publicações, janela de horário em São Paulo e proteção contra duplicatas por grupo.
+- **Busca real pela API oficial de afiliados Shopee**; só usa URL de afiliado válida no WhatsApp; ranqueia candidatos por desconto, comissão, reputação e vendas.
+- **WhatsApp via Baileys:** um único número entra em vários grupos; valida o JID e o nome exato do grupo antes de qualquer publicação, e usa o mesmo socket para todos.
+- **Área de fontes** identifica quais conectores estão disponíveis e quais estão apenas planejados.
+- **Histórico limitado** de envios, erros e simulações persistente no volume Docker.
+- **Envio conservador:** `SEND_ENABLED=false` por padrão, intervalos por grupo, 3 minutos de guarda global, pendências para evitar repost em falhas incertas.
 
 ## Requisitos
 
-- Node.js 22+ (ou Docker).
-- App ID e Secret com acesso à Open API de Afiliados da Shopee Brasil.
-- Um número de WhatsApp adicionado ao grupo de achadinhos.
-- VPS conectada à internet, com espaço persistente para a sessão.
+- Node.js 22+, ou Docker + Compose (recomendado na VPS).
+- Credenciais **Shopee Affiliate API (App ID / Secret)** e conta afiliada habilitada.
+- Um número WhatsApp que participa de todos os grupos desejados.
+- Cada grupo com nome cadastrado no painel **exatamente igual** ao assunto/nome do WhatsApp.
+- VPS pequena (comece com **1 vCPU, 1 GB RAM**; 2 GB é mais confortável para logs/atualizações). Não precisa Chrome ou Puppeteer, pois Baileys usa WebSocket.
+- Importante: Baileys é biblioteca não oficial. O uso para envios automáticos pode acarretar restrições na conta WhatsApp. Respeite consentimento dos membros, cadência moderada e regras da plataforma.
 
-## Instalação local / VPS
+## Início rápido (VPS com Docker)
 
-Execute no terminal:
+```bash
+git clone https://github.com/ZammisLMS/shopee-natal-bot.git
+cd shopee-natal-bot
+cp .env.example .env
+openssl rand -hex 32
+```
 
-    git clone https://github.com/ZammisLMS/shopee-natal-bot.git
-    cd shopee-natal-bot
-    npm install
-    cp .env.example .env
+Copie a saída do último comando para `PANEL_TOKEN` em `.env`. Insira também `SHOPEE_APP_ID` e `SHOPEE_APP_SECRET`. **Não poste credenciais em conversas ou issues.**
 
-1. Abra o arquivo .env no seu editor e preencha SHOPEE_APP_ID e SHOPEE_APP_SECRET.
-2. Teste **sem enviar**: npm run scan. O comando só imprime uma oferta no terminal, se houver.
-3. Faça o pareamento do número: npm run list-groups. Escaneie o QR em WhatsApp > Aparelhos conectados. O comando lista nome e JID de cada grupo e não publica mensagens.
-4. Copie o JID correto para WHATSAPP_GROUP_JID e o nome idêntico para EXPECTED_GROUP_NAME.
-5. Confirme que o número pertence ao grupo e que os participantes esperam receber ofertas.
-6. Ative **somente depois** de conferir os dados: SEND_ENABLED=true no .env.
-7. Inicie o serviço com npm start. O bot só envia se o grupo encontrado corresponder ao JID e nome esperados.
+```bash
+docker compose up -d --build
+docker compose logs -f bot
+```
 
-Se a Shopee não retornar ofertas que cumpram todos os filtros, o bot ficará em silêncio. Não há garantia de seis ofertas diárias.
+Pareie o WhatsApp lendo o QR exibido nos logs (WhatsApp → Aparelhos conectados). Não ative os envios ainda.
 
-## Rodar com Docker Compose
+Por segurança, o Docker expõe o painel só no **127.0.0.1 da VPS**, porta 8787. No computador pessoal, abra um túnel:
 
-Após preencher .env, crie o diretório persistente e permita escrita ao usuário de dentro do container (UID 1000):
+```bash
+ssh -L 8787:127.0.0.1:8787 usuario@IP_DA_VPS
+```
 
-    mkdir -p runtime
-    sudo chown 1000:1000 runtime
-    docker compose up -d --build
-    docker compose logs -f bot
+Abra **http://127.0.0.1:8787** no seu navegador e informe o token de administração. Se quiser acesso público mais tarde, configure HTTPS com autenticação e proxy reverso, sem liberar diretamente a porta 8787 da VPS.
 
-O QR aparece nos logs se a sessão ainda não tiver sido vinculada. Para listar os grupos com o serviço parado:
+## Como configurar grupos
 
-    docker compose run --rm bot node src/index.js --list-groups
+1. Vá em **Grupos e parâmetros**. Há exemplos para Natal e Suplementos, ambos inicialmente pausados.
+2. Clique **Configurar**. Informe o nome exato do grupo WhatsApp e o seu **JID** (formato `123456789-12345@g.us`). Para descobrir os JIDs, execute:
+   ```bash
+   docker compose stop bot
+   docker compose run --rm bot node src/index.js --list-groups
+   # Após copiar os JIDs, encerre o processo de listagem com Ctrl+C:
+   docker compose up -d bot
+   ```
+   > Não execute dois processos Baileys simultaneamente com a mesma sessão.
+3. Ajuste filtros, palavras-chave e horário por grupo.
+4. Clique em **Testar busca**. É uma busca real na Shopee que **nunca envia mensagem**.
+5. Ative o grupo no painel. Ele buscará periodicamente, mas continuará em **simulação** enquanto `SEND_ENABLED=false`.
+6. Quando tudo estiver validado, altere `SEND_ENABLED=true` no `.env` e reinicie o serviço:
+   ```bash
+   docker compose up -d --force-recreate bot
+   ```
+   O bot só publica nos grupos marcados como ativos. **Cada publicação valida o JID e o nome do grupo**.
 
-Atualizações:
+### Configurações gerais no .env
 
-    docker compose up -d --build
+| Variável | Função |
+|---|---|
+| `SEND_ENABLED` | Trava geral de postagem; padrão `false` |
+| `PANEL_TOKEN` | Token administrativo obrigatório, 32+ caracteres |
+| `PANEL_HOST`, `PANEL_PORT` | Endereço/porta local, padrão 127.0.0.1:8787; Compose ajusta bind interno |
+| `GROUPS_FILE` | Arquivo persistente de grupos, padrão `runtime/groups.json` |
+| `SHOPEE_APP_ID`, `SHOPEE_APP_SECRET` | Credenciais de afiliado |
+| `KEYWORDS_PER_SCAN`, `RESULTS_PER_QUERY` | Máximo de buscas e resultados por rodada |
+| `TIME_ZONE` | Fuso das janelas de publicação, padrão America/Sao_Paulo |
 
-**Nunca publique** os arquivos .env ou runtime/ no Git. A pasta runtime/ contém chaves de sessão do WhatsApp. Mantenha backups privados, não exponha o serviço na internet e rode somente uma instância.
+Os parâmetros individuais dos grupos ficam no painel e são persistidos em `GROUPS_FILE`. No Docker, os arquivos de sessão WhatsApp, grupos, histórico e estado são guardados no volume nomeado `bot_runtime`. **Faça backup do volume** antes de migrar ou reinstalar.
 
-## Configuração
+## Desenvolvimento local
 
-| Variável | Padrão | Efeito |
-| --- | --- | --- |
-| SEND_ENABLED | false | Bloqueia publicação até ativação explícita |
-| WHATSAPP_GROUP_JID | vazio | Grupo destinatário, obtido com list-groups |
-| EXPECTED_GROUP_NAME | vazio | Trava para prevenir envio ao grupo incorreto |
-| MAX_PRICE_BRL | 100 | Preço máximo |
-| MIN_DISCOUNT_PCT | 30 | Desconto anunciado mínimo |
-| MIN_RATING | 4.7 | Nota mínima |
-| MIN_SALES | 50 | Volume de vendas mínimo |
-| MIN_COMMISSION_PCT | 5 | Comissão mínima |
-| QUERY_INTERVAL_MINUTES | 30 | Frequência de buscas |
-| KEYWORDS_PER_SCAN | 3 | Quantidade de temas pesquisados a cada ciclo |
-| MAX_DAILY_SENDS | 6 | Teto de mensagens por dia |
-| MIN_POST_GAP_MINUTES | 120 | Pausa mínima entre publicações |
-| REPOST_COOLDOWN_DAYS | 7 | Bloqueio de repetição |
-| SEND_START_HOUR / SEND_END_HOUR | 9 / 21 | Janela de envio (fim exclusivo) |
-| TIME_ZONE | America/Sao_Paulo | Fuso dos limites |
+```bash
+npm install
+cp .env.example .env
+# Configure PANEL_TOKEN e credenciais
+npm start
+npm test
+npm run check
+npm run scan           # Testa todos os grupos sem mandar WhatsApp
+npm run list-groups    # Lista JIDs com a sessão WhatsApp
+```
 
-Os filtros percentuais são aplicados **após** a busca da API, pois não são todos parâmetros diretos do endpoint. O campo priceDiscountRate é a taxa informada pela Shopee, **não prova** que o preço atual é o menor dos últimos meses. O projeto não inventa preço anterior nem cupom. Variações de frete, cupom, estoque e comissão podem alterar o valor final.
+Testes não precisam de credenciais. O painel usa HTTP nativo do Node, sem banco pesado e sem frontend build.
 
-## Comandos
+## Multi-fonte: roteiro
 
-- npm run scan — busca única, sem WhatsApp e sem envio.
-- npm run list-groups — pareia o número e lista grupos, sem envio.
-- npm start — monitoramento contínuo; envia somente com SEND_ENABLED=true e grupo validado.
-- npm test — testes do motor de seleção.
-- npm run check — checagem sintática dos módulos.
+**Ativo hoje:** Shopee. As próximas integrações precisariam de contas autorizadas, credenciais e adaptadores para formatos e links de cada programa. No painel, fontes não integradas são explicitamente marcadas como planejadas ou em estudo, e não são selecionáveis para envio:
 
-## Segurança operacional
+- **AliExpress:** APIs para consulta de produtos de afiliados e links.
+- **Amazon:** Creators API, condicionada à elegibilidade do programa; a antiga PA-API está sendo descontinuada.
+- **Awin:** Product Feeds/APIs para anunciantes e ofertas autorizadas.
+- **Mercado Livre / Influenciador Magalu:** programas de afiliados existem, mas não foi confirmada API oficial de automação de links aplicável à conta.
+- **TikTok Shop:** fluxos de afiliados e APIs sujeitos à disponibilidade e autorização.
 
-- Não registre App Secret ou token de sessão em logs.
-- Um envio com confirmação incerta fica marcado como pendente por 24h para evitar retransmissão imediata.
-- Não envie várias mensagens simultâneas; o motor limita a uma candidata por ciclo.
-- Não use automação de adesão a grupos nem dispare mensagens a contatos individuais.
-- Use grupo com adesão voluntária. Se houver denúncias ou restrições, desligue SEND_ENABLED.
-- Não há estratégia de ocultação ou contorno dos mecanismos de detecção do WhatsApp.
+Futuro: interface de conectores `searchOffers(provider, keyword)`, normalização por fonte, links com tags próprias e ranking comparável. **Não habilite provedores baseados em links manuais ou scraping sem avaliar seus termos**.
 
-## Escopo do MVP
+## Observações importantes
 
-Esta versão busca ofertas em páginas iniciais de palavras-chave, seleciona a melhor elegível por ciclo e publica somente em **um grupo**. Não inclui painel web, catálogo de histórico real de preços, validação de cupom/frete no checkout ou métricas de conversão. A execução real depende das credenciais e do pareamento, que não são fornecidos a este repositório.
+- Alterações no painel são persistidas automaticamente e aplicadas na próxima rodada; não requerem rebuild.
+- Produto sem preço/desconto/comissão/avaliação válidos ou sem link Shopee autorizado é descartado. Os preços são informados pela API e podem mudar.
+- Uma oferta publicada em um grupo pode ser publicada em outro (segmentação por grupo); no mesmo grupo, respeita o cooldown.
+- Em falha de envio incerta, mantém registro pendente por até 24h para reduzir duplicatas. Antes de retomar, confira o grupo.
+- O painel exige token Bearer; mantenha-o secreto e prefira SSH ou acesso HTTPS autenticado. Não há reset de senha nem usuários múltiplos neste MVP.
+- `SEND_ENABLED=true` autoriza publicações automáticas sem revisão humana. Use apenas em grupos próprios e com autorização.
